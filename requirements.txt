@@ -1,0 +1,11 @@
+# Framework Web
+Django>=5.0,<7.0
+
+# Machine Learning & Data Processing
+numpy>=1.24.0
+scipy>=1.10.0
+scikit-learn>=1.3.0
+joblib>=1.3.0
+
+# Export & Data Manipulation (Opsional tapi sering digunakan untuk dataset CSV/Excel)
+pandas>=2.0.0
