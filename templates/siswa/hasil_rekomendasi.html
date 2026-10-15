@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Hasil Rekomendasi Jurusan — {{ student.nama }}{% endblock %}
+
+{% block layout_content %}
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-emerald-50">
+
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+        <div class="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full bg-white border border-slate-200 overflow-hidden flex items-center justify-center shadow-sm flex-shrink-0">
+                    <img src="{% static 'img/logo_sekolah.png' %}" alt="Logo" class="w-full h-full object-contain">
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold text-slate-900">Hasil Rekomendasi Jurusan</h1>
+                    <p class="text-xs text-slate-500">MA Plus Peradaban Insani</p>
+                </div>
+            </div>
+            <a href="{% url 'siswa_logout' %}" class="text-xs text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1.5 transition-colors">
+                <i data-lucide="log-out" class="w-4 h-4"></i> Keluar
+            </a>
+        </div>
+    </header>
+
+    <div class="max-w-2xl mx-auto px-4 py-8 space-y-6">
+
+        <!-- Selamat Banner -->
+        <div class="bg-gradient-to-r from-brand-600 via-indigo-600 to-brand-700 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+            <div class="absolute -right-10 -top-10 w-48 h-48 bg-white/5 rounded-full pointer-events-none"></div>
+            <div class="relative z-10">
+                <div class="flex items-center gap-2 mb-2">
+                    <i data-lucide="sparkles" class="w-5 h-5 text-amber-300"></i>
+                    <span class="text-xs font-bold text-brand-200 uppercase tracking-wider">Hasil Siap</span>
+                </div>
+                <h2 class="text-xl font-extrabold mb-1">Halo, {{ student.nama }}!</h2>
+                <p class="text-sm text-brand-200">Berikut adalah rekomendasi jurusan berdasarkan data akademik dan minat Anda yang diproses menggunakan algoritma <strong>Random Forest</strong>.</p>
+
+                <div class="mt-4 grid grid-cols-2 gap-2 text-xs">
+                    <div class="bg-white/10 rounded-xl p-2.5">
+                        <span class="text-brand-300">NIS</span>
+                        <div class="font-mono font-bold text-white">{{ student.nis }}</div>
+                    </div>
+                    <div class="bg-white/10 rounded-xl p-2.5">
+                        <span class="text-brand-300">Kelas</span>
+                        <div class="font-bold text-white">{{ student.kelas }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rekomendasi Utama -->
+        {% if primary_recommendation %}
+        <div class="bg-white rounded-3xl border-2 border-brand-200 shadow-xl p-6 relative overflow-hidden">
+            <div class="absolute top-4 right-4">
+                <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200 flex items-center gap-1">
+                    <i data-lucide="star" class="w-3.5 h-3.5"></i> Rekomendasi Utama
+                </span>
+            </div>
+            <div class="flex items-center gap-4 mt-2">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-brand-600/30">
+                    <i data-lucide="award" class="w-7 h-7"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Jurusan #1 Terbaik</p>
+                    <h3 class="text-2xl font-extrabold text-brand-800 mt-0.5">{{ primary_recommendation.major_label }}</h3>
+                    <div class="flex items-center gap-2 mt-1">
+                        <div class="h-2 w-32 bg-slate-200 rounded-full overflow-hidden">
+                            <div class="h-full bg-brand-500 rounded-full" style="width: {{ primary_recommendation.score }}%"></div>
+                        </div>
+                        <span class="text-sm font-extrabold text-brand-700">{{ primary_recommendation.score|floatformat:1 }}%</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Probabilitas prediksi model</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 5 Jurusan Teratas -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center gap-2">
+                <i data-lucide="list-ordered" class="w-5 h-5 text-brand-600"></i>
+                <h3 class="text-sm font-bold text-slate-900">5 Jurusan Teratas</h3>
+            </div>
+            <div class="divide-y divide-slate-100">
+                {% for result in results %}
+                <div class="flex items-center gap-4 p-4 {% if result.rank == 1 %}bg-brand-50/40{% endif %}">
+                    <div class="w-8 h-8 rounded-xl {% if result.rank == 1 %}bg-brand-600 text-white{% else %}bg-slate-100 text-slate-600{% endif %} flex items-center justify-center font-extrabold text-sm flex-shrink-0">
+                        {{ result.rank }}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <span class="font-semibold text-sm text-slate-900 truncate">{{ result.major_label }}</span>
+                            <span class="font-extrabold text-sm ml-3 flex-shrink-0 {% if result.rank == 1 %}text-brand-700{% else %}text-slate-700{% endif %}">{{ result.score|floatformat:1 }}%</span>
+                        </div>
+                        <div class="mt-1.5 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div class="h-full {% if result.rank == 1 %}bg-brand-500{% else %}bg-slate-400{% endif %} rounded-full" style="width: {{ result.score }}%"></div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Profil Minat Radar Chart -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
+            <h3 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <i data-lucide="radar" class="w-4 h-4 text-brand-600"></i> Profil Minat Anda
+            </h3>
+            <div class="h-52">
+                <canvas id="minatChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Model Info -->
+        {% if latest_run.model_version %}
+        <div class="bg-slate-50 rounded-2xl border border-slate-200 p-4 text-xs text-slate-500 space-y-1">
+            <div class="flex justify-between">
+                <span>Diproses pada</span>
+                <span class="font-semibold text-slate-700">{{ latest_run.completed_at|date:"d M Y, H:i" }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Versi Model</span>
+                <span class="font-mono font-semibold text-indigo-700">{{ latest_run.model_version.version_name }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Algoritma</span>
+                <span class="font-semibold text-slate-700">{{ latest_run.model_version.algorithm }}</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Disclaimer -->
+        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-800 flex items-start gap-2">
+            <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-500"></i>
+            <div>
+                <strong>Catatan Penting:</strong> Hasil ini merupakan <em>probabilitas prediksi model</em> berdasarkan data akademik dan minat Anda, bukan jaminan keberhasilan akademik atau kepastian kecocokan. Gunakan sebagai bahan pertimbangan dan diskusikan dengan orang tua serta Guru BK sekolah.
+            </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="flex gap-3">
+            <a href="{% url 'siswa_logout' %}"
+                class="flex-1 py-3.5 px-5 bg-white border border-slate-200 text-slate-700 font-semibold text-sm rounded-2xl hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 shadow-sm">
+                <i data-lucide="log-out" class="w-4 h-4"></i> Selesai & Keluar
+            </a>
+            <button onclick="window.print()"
+                class="flex-1 py-3.5 px-5 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm rounded-2xl transition-colors flex items-center justify-center gap-2">
+                <i data-lucide="printer" class="w-4 h-4"></i> Cetak Hasil
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('minatChart');
+    if (!ctx) return;
+
+    const labels = [
+        {% for p in interest_profiles %}"{{ p.label }}",{% endfor %}
+    ];
+    const data = [
+        {% for p in interest_profiles %}{{ p.score }},{% endfor %}
+    ];
+
+    new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Skor Minat (1-5)',
+                data: data,
+                backgroundColor: 'rgba(79, 70, 229, 0.15)',
+                borderColor: 'rgba(79, 70, 229, 0.8)',
+                borderWidth: 2,
+                pointBackgroundColor: '#4f46e5',
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                r: {
+                    min: 0,
+                    max: 5,
+                    ticks: {
+                        stepSize: 1,
+                        font: { size: 10 }
+                    },
+                    pointLabels: {
+                        font: { size: 10, weight: '600' }
+                    }
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

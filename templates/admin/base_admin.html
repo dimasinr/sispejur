@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block layout_content %}
+<div class="min-h-screen flex bg-slate-100/70">
+
+    <!-- Mobile Sidebar Backdrop -->
+    <div id="mobile-backdrop" class="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm hidden md:hidden" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar Admin (Tepat 5 Menu Sesuai PRD: Dashboard, Data Siswa, Prediksi Jurusan, Data Latih, Logout) -->
+    <aside id="sidebar" class="fixed top-0 bottom-0 left-0 z-50 w-72 bg-white border-r border-slate-200/80 flex flex-col transition-transform duration-300 transform -translate-x-full md:translate-x-0 shadow-sm">
+        
+        <!-- Sidebar Header / School Branding -->
+        <div class="h-20 px-6 flex items-center gap-3 border-b border-slate-100 bg-slate-50/50">
+            <div class="w-11 h-11 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-md overflow-hidden flex-shrink-0">
+                <img src="{% static 'img/logo_sekolah.png' %}" alt="Logo" class="w-full h-full object-contain">
+            </div>
+            <div class="flex-1 min-w-0">
+                <h1 class="text-base font-bold text-slate-900 leading-tight truncate tracking-tight">MA Plus Peradaban Insani</h1>
+                <p class="text-xs text-brand-600 font-semibold tracking-wide uppercase mt-0.5">SPK Random Forest</p>
+            </div>
+            <button class="md:hidden text-slate-400 hover:text-slate-600" onclick="toggleSidebar()">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- Navigation (Tepat 5 Menu Sesuai Kriteria AC-02) -->
+        <nav class="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+            
+            <!-- Menu 1: Dashboard -->
+            <a href="{% url 'dashboard' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 {% if active_nav == 'dashboard' %}bg-brand-600 text-white shadow-md shadow-brand-600/25 font-semibold{% else %}text-slate-600 hover:bg-slate-100 hover:text-slate-900{% endif %}">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <!-- Menu 2: Data Siswa -->
+            <a href="{% url 'data_siswa' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 {% if active_nav == 'data_siswa' %}bg-brand-600 text-white shadow-md shadow-brand-600/25 font-semibold{% else %}text-slate-600 hover:bg-slate-100 hover:text-slate-900{% endif %}">
+                <i data-lucide="users" class="w-5 h-5"></i>
+                <span>Data Siswa</span>
+            </a>
+
+            <!-- Menu 3: Prediksi Jurusan -->
+            <a href="{% url 'prediksi_jurusan' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 {% if active_nav == 'prediksi_jurusan' %}bg-brand-600 text-white shadow-md shadow-brand-600/25 font-semibold{% else %}text-slate-600 hover:bg-slate-100 hover:text-slate-900{% endif %}">
+                <i data-lucide="sparkles" class="w-5 h-5"></i>
+                <span>Prediksi Jurusan</span>
+            </a>
+
+            <!-- Menu 4: Data Latih -->
+            <a href="{% url 'data_latih' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 {% if active_nav == 'data_latih' %}bg-brand-600 text-white shadow-md shadow-brand-600/25 font-semibold{% else %}text-slate-600 hover:bg-slate-100 hover:text-slate-900{% endif %}">
+                <i data-lucide="database" class="w-5 h-5"></i>
+                <span>Data Latih</span>
+            </a>
+
+            <div class="pt-4 border-t border-slate-100 my-2"></div>
+
+            <!-- Menu 5: Logout -->
+            <a href="{% url 'admin_logout' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-colors">
+                <i data-lucide="log-out" class="w-5 h-5"></i>
+                <span>Logout</span>
+            </a>
+
+        </nav>
+
+        <!-- Sidebar Footer Info -->
+        <div class="p-4 border-t border-slate-100 bg-slate-50/50">
+            <div class="flex items-center justify-between text-xs text-slate-500">
+                <a href="{% url 'cek_nis' %}" target="_blank" class="flex items-center gap-1.5 text-brand-600 hover:text-brand-700 font-semibold">
+                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                    Portal Siswa
+                </a>
+                <span class="text-slate-400">Skripsi SPK</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col md:ml-72 min-h-screen">
+        
+        <!-- Topbar Header -->
+        <header class="h-20 bg-white/90 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30 px-6 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <button class="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl" onclick="toggleSidebar()">
+                    <i data-lucide="menu" class="w-6 h-6"></i>
+                </button>
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900">{% block page_title %}Dashboard{% endblock %}</h2>
+                    <p class="text-xs text-slate-500 hidden sm:block">{% block page_subtitle %}Sistem Pendukung Keputusan Penjurusan Perguruan Tinggi{% endblock %}</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <div class="hidden sm:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full text-xs text-slate-600">
+                    <i data-lucide="user-check" class="w-3.5 h-3.5 text-emerald-600"></i>
+                    <span>Admin: <strong class="text-slate-800">{{ request.user.username }}</strong></span>
+                </div>
+                <a href="{% url 'admin_logout' %}" title="Logout" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors">
+                    <i data-lucide="power" class="w-5 h-5"></i>
+                </a>
+            </div>
+        </header>
+
+        <!-- Body Page Content -->
+        <main class="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto">
+            {% block admin_content %}{% endblock %}
+        </main>
+
+        <!-- Admin Footer -->
+        <footer class="py-4 px-8 border-t border-slate-200/60 bg-white text-center text-xs text-slate-400">
+            &copy; 2026 MA Plus Peradaban Insani &bull; Sistem Rekomendasi Jurusan Berbasis Random Forest Classifier
+        </footer>
+    </div>
+</div>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const backdrop = document.getElementById('mobile-backdrop');
+        sidebar.classList.toggle('-translate-x-full');
+        backdrop.classList.toggle('hidden');
+    }
+</script>
+{% endblock %}

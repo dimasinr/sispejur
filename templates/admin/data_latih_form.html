@@ -1,0 +1,117 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}Tambah Data Latih{% endblock %}
+{% block page_subtitle %}Masukkan satu record data latih beserta label jurusan secara manual{% endblock %}
+
+{% block admin_content %}
+<div class="max-w-3xl mx-auto">
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-100 flex items-center gap-3">
+            <div class="p-2.5 rounded-xl bg-brand-50 text-brand-600">
+                <i data-lucide="database" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <h3 class="font-bold text-slate-900">Tambah Data Latih Baru</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Isi nilai fitur dan label jurusan untuk satu record pelatihan.</p>
+            </div>
+        </div>
+
+        <form method="post" class="p-6 space-y-6">
+            {% csrf_token %}
+
+            <!-- Label & Versi -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Label Jurusan Target <span class="text-rose-500">*</span></label>
+                    {{ form.major_label }}
+                    {% if form.major_label.errors %}<p class="text-rose-500 text-xs mt-1">{{ form.major_label.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">Versi Dataset</label>
+                    {{ form.dataset_version }}
+                </div>
+            </div>
+
+            <!-- Nilai Akademik -->
+            <div>
+                <h4 class="text-sm font-bold text-slate-900 mb-3 pb-2 border-b border-slate-100 flex items-center gap-2">
+                    <i data-lucide="book-open" class="w-4 h-4 text-brand-600"></i> Nilai Rapor (Skala 0 – 100)
+                </h4>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Matematika</label>
+                        {{ form.nilai_matematika }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Bahasa Indonesia</label>
+                        {{ form.nilai_bahasa_indonesia }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Bahasa Inggris</label>
+                        {{ form.nilai_bahasa_inggris }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">IPA (Fisika/Bio/Kim)</label>
+                        {{ form.nilai_ipa }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">IPS (Ekonomi/Geo/Sos)</label>
+                        {{ form.nilai_ips }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Pendidikan Agama Islam</label>
+                        {{ form.nilai_agama }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skor Minat -->
+            <div>
+                <h4 class="text-sm font-bold text-slate-900 mb-3 pb-2 border-b border-slate-100 flex items-center gap-2">
+                    <i data-lucide="heart" class="w-4 h-4 text-rose-500"></i> Rata-Rata Skor Minat per Kelompok (Skala 1.0 – 5.0)
+                </h4>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Teknologi & Komputer</label>
+                        {{ form.minat_teknologi }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Sains & Kesehatan</label>
+                        {{ form.minat_sains }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Ekonomi & Bisnis</label>
+                        {{ form.minat_bisnis }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Sosial & Hukum</label>
+                        {{ form.minat_sosial }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Seni & Desain</label>
+                        {{ form.minat_seni }}
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Pendidikan & Bahasa</label>
+                        {{ form.minat_pendidikan }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 pt-2 border-t border-slate-100">
+                <button type="submit"
+                    class="flex-1 py-3 px-5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg shadow-brand-600/20">
+                    <i data-lucide="save" class="w-4 h-4"></i>
+                    Simpan Data Latih
+                </button>
+                <a href="{% url 'data_latih' %}"
+                    class="flex-1 py-3 px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                    Batal
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}Konfirmasi Hapus Siswa{% endblock %}
+{% block page_subtitle %}Verifikasi penghapusan data siswa dari sistem{% endblock %}
+
+{% block admin_content %}
+<div class="max-w-xl mx-auto">
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <!-- Header -->
+        <div class="bg-rose-50 border-b border-rose-100 p-6 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center text-rose-600 flex-shrink-0">
+                <i data-lucide="trash-2" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h3 class="text-base font-bold text-rose-800">Hapus Data Siswa</h3>
+                <p class="text-xs text-rose-600 mt-0.5">Tindakan ini tidak dapat dibatalkan.</p>
+            </div>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <p class="text-sm text-slate-700">
+                Anda akan menghapus data siswa berikut secara permanen dari sistem, termasuk nilai akademik, jawaban kuesioner, dan seluruh riwayat prediksinya.
+            </p>
+
+            <!-- Data Siswa -->
+            <div class="bg-slate-50 rounded-2xl border border-slate-200 p-4 space-y-2">
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-500">NIS</span>
+                    <span class="font-bold text-slate-900">{{ student.nis }}</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-500">Nama Lengkap</span>
+                    <span class="font-bold text-slate-900">{{ student.nama }}</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-500">Kelas</span>
+                    <span class="font-semibold text-slate-700">{{ student.kelas }}</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-500">Status Prediksi</span>
+                    <span class="font-semibold text-slate-700">{{ student.status_prediksi }}</span>
+                </div>
+            </div>
+
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 flex items-start gap-2">
+                <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
+                <span>Seluruh riwayat prediksi dan hasil rekomendasi yang terhubung dengan siswa ini juga akan ikut terhapus.</span>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="px-6 pb-6 flex flex-col sm:flex-row gap-3">
+            <form method="post" class="flex-1">
+                {% csrf_token %}
+                <button type="submit"
+                    class="w-full py-3 px-5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg shadow-rose-600/20">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    Ya, Hapus Permanen
+                </button>
+            </form>
+            <a href="{% url 'siswa_detail' student.pk %}"
+                class="flex-1 py-3 px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-xl flex items-center justify-center gap-2 transition-colors">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                Batal, Kembali
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

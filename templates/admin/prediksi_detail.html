@@ -1,0 +1,276 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}Detail Perhitungan Prediksi{% endblock %}
+{% block page_subtitle %}Transparansi tahapan proses Random Forest — FR-10{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+
+    <!-- Header Info -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600">
+                    <i data-lucide="user" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900">{{ pred_run.student.nama }}</h3>
+                    <p class="text-xs text-slate-500">NIS: <span class="font-mono font-semibold">{{ pred_run.student.nis }}</span> &bull; Kelas: {{ pred_run.student.kelas }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center gap-3 flex-wrap">
+            <span class="text-xs text-slate-500 font-mono">{{ pred_run.completed_at|date:"d M Y, H:i:s" }}</span>
+            {% if pred_run.status == 'Berhasil' %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Prediksi Berhasil
+            </span>
+            {% else %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                <span class="w-2 h-2 rounded-full bg-rose-500"></span> Prediksi Gagal
+            </span>
+            {% endif %}
+            <a href="{% url 'prediksi_jurusan' %}?tab=riwayat" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold hover:bg-slate-200 transition-colors flex items-center gap-1">
+                <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Kembali
+            </a>
+        </div>
+    </div>
+
+    {% if pred_run.status == 'Berhasil' %}
+
+    <!-- Hasil Rekomendasi (Top 5) -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center gap-2">
+            <i data-lucide="trophy" class="w-5 h-5 text-amber-500"></i>
+            <h3 class="text-sm font-bold text-slate-900">Hasil Rekomendasi — 5 Jurusan Teratas</h3>
+        </div>
+        <div class="p-5">
+            <div class="space-y-3">
+                {% for result in results %}
+                <div class="flex items-center gap-4 p-3.5 rounded-xl {% if result.rank == 1 %}bg-gradient-to-r from-brand-50 to-indigo-50 border-2 border-brand-200{% else %}bg-slate-50 border border-slate-200{% endif %}">
+                    <div class="w-9 h-9 rounded-xl {% if result.rank == 1 %}bg-brand-600 text-white{% else %}bg-slate-200 text-slate-600{% endif %} flex items-center justify-center font-extrabold text-sm flex-shrink-0">
+                        {{ result.rank }}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="font-bold {% if result.rank == 1 %}text-brand-800{% else %}text-slate-800{% endif %} text-sm truncate">{{ result.major_label }}</span>
+                            <span class="font-extrabold {% if result.rank == 1 %}text-brand-700{% else %}text-slate-700{% endif %} text-base flex-shrink-0">{{ result.score|floatformat:2 }}%</span>
+                        </div>
+                        <div class="mt-1.5 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div class="h-full {% if result.rank == 1 %}bg-brand-500{% else %}bg-slate-400{% endif %} rounded-full transition-all" style="width: {{ result.score }}%"></div>
+                        </div>
+                        {% if result.rank == 1 %}<span class="text-[10px] text-brand-600 font-bold mt-1 block">★ Rekomendasi Utama</span>{% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 Tahapan Perhitungan -->
+    <div class="space-y-4">
+
+        <!-- Tahap 1: Data Input -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <button class="w-full p-5 text-left flex items-center justify-between group" onclick="toggleSection('tahap1')">
+                <div class="flex items-center gap-3">
+                    <span class="w-7 h-7 rounded-lg bg-brand-100 text-brand-700 text-xs font-extrabold flex items-center justify-center">1</span>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-900">Tahap 1 — Data Input</h4>
+                        <p class="text-xs text-slate-500">Fitur yang digunakan model (nilai akademik + skor minat)</p>
+                    </div>
+                </div>
+                <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 transition-transform group-[.open]:rotate-180" id="icon-tahap1"></i>
+            </button>
+            <div id="tahap1" class="hidden border-t border-slate-100 p-5">
+                {% if tahap_1 %}
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {% for item in tahap_1.fitur_input %}
+                    <div class="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                        <div class="text-xs text-slate-500 mb-1">{{ item.label }}</div>
+                        <div class="text-sm font-extrabold text-slate-900">{{ item.nilai }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <p class="text-xs text-slate-400 mt-3 italic">{{ tahap_1.keterangan }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tahap 2: Validasi & Preprocessing -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <button class="w-full p-5 text-left flex items-center justify-between group" onclick="toggleSection('tahap2')">
+                <div class="flex items-center gap-3">
+                    <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-extrabold flex items-center justify-center">2</span>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-900">Tahap 2 — Validasi & Preprocessing</h4>
+                        <p class="text-xs text-slate-500">Status kelengkapan data dan metode transformasi fitur</p>
+                    </div>
+                </div>
+                <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400" id="icon-tahap2"></i>
+            </button>
+            <div id="tahap2" class="hidden border-t border-slate-100 p-5 space-y-3">
+                {% if tahap_2 %}
+                <div class="flex items-center gap-2">
+                    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-500"></i>
+                    <span class="text-sm font-semibold text-emerald-700">{{ tahap_2.status_kelengkapan }}</span>
+                </div>
+                <div class="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                    <p class="text-xs font-semibold text-slate-700 mb-2">Vektor Fitur Numerik (urutan sesuai model):</p>
+                    <div class="flex flex-wrap gap-2">
+                        {% for val in tahap_2.vektor_fitur_numerik %}
+                        <span class="px-2 py-0.5 rounded-lg bg-white border border-slate-300 font-mono text-xs text-slate-800">{{ val }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="bg-indigo-50 rounded-xl p-3 border border-indigo-100">
+                    <p class="text-xs text-indigo-700"><strong>Metode Transformasi:</strong> {{ tahap_2.metode_transformasi }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tahap 3: Proses Prediksi oleh Model -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <button class="w-full p-5 text-left flex items-center justify-between group" onclick="toggleSection('tahap3')">
+                <div class="flex items-center gap-3">
+                    <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 text-xs font-extrabold flex items-center justify-center">3</span>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-900">Tahap 3 — Proses Prediksi oleh Model</h4>
+                        <p class="text-xs text-slate-500">Model menghitung probabilitas tiap jurusan dan memilih nilai tertinggi sebagai rekomendasi</p>
+                    </div>
+                </div>
+                <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400" id="icon-tahap3"></i>
+            </button>
+            <div id="tahap3" class="hidden border-t border-slate-100 p-5 space-y-4">
+                {% if tahap_4 %}
+                <div class="flex items-center gap-2 p-3 bg-brand-50 rounded-xl border border-brand-100">
+                    <i data-lucide="target" class="w-4 h-4 text-brand-600 flex-shrink-0"></i>
+                    <div class="text-sm">
+                        <span class="text-slate-600">Kelas terpilih (argmax): </span>
+                        <span class="font-extrabold text-brand-700">{{ tahap_4.kelas_terpilih_argmax }}</span>
+                    </div>
+                </div>
+
+                <!-- Distribusi Probabilitas -->
+                <div>
+                    <h5 class="text-xs font-bold text-slate-700 mb-3 uppercase tracking-wider">Distribusi Probabilitas Seluruh Kelas</h5>
+                    <p class="text-xs text-slate-500 mb-3">Setiap pohon keputusan dalam Random Forest memberikan suara. Skor di bawah adalah rata-rata probabilitas dari seluruh pohon.</p>
+                    <div class="space-y-2">
+                        {% for item in tahap_4.distribusi_probabilitas %}
+                        <div class="flex items-center gap-3 text-xs">
+                            <span class="w-40 truncate text-slate-700 flex-shrink-0">{{ item.major_label }}</span>
+                            <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-brand-400 rounded-full" style="width: {{ item.score_percent }}%"></div>
+                            </div>
+                            <span class="font-bold text-slate-800 w-16 text-right flex-shrink-0">{{ item.score_percent }}%</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Feature Importance -->
+                {% if tahap_4.feature_importances %}
+                <div class="border-t border-slate-100 pt-4">
+                    <h5 class="text-xs font-bold text-slate-700 mb-3 uppercase tracking-wider">Kontribusi Fitur terhadap Keputusan Model</h5>
+                    <p class="text-xs text-slate-500 mb-3">Seberapa besar pengaruh setiap fitur dalam proses pengambilan keputusan model secara global.</p>
+                    <div class="space-y-2">
+                        {% for fi in tahap_4.feature_importances %}
+                        <div class="flex items-center gap-3 text-xs">
+                            <span class="w-44 truncate text-slate-600 flex-shrink-0">{{ fi.label }}</span>
+                            <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-purple-400 rounded-full" style="width: {{ fi.importance }}%"></div>
+                            </div>
+                            <span class="font-semibold text-slate-700 w-12 text-right flex-shrink-0">{{ fi.importance }}%</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tahap 4: Pengurutan & Hasil Rekomendasi Akhir -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <button class="w-full p-5 text-left flex items-center justify-between group" onclick="toggleSection('tahap4')">
+                <div class="flex items-center gap-3">
+                    <span class="w-7 h-7 rounded-lg bg-teal-100 text-teal-700 text-xs font-extrabold flex items-center justify-center">4</span>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-900">Tahap 4 — Pengurutan &amp; Hasil Rekomendasi Akhir</h4>
+                        <p class="text-xs text-slate-500">Jurusan diurutkan dari skor probabilitas tertinggi, lalu 5 teratas dipilih sebagai rekomendasi</p>
+                    </div>
+                </div>
+                <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400" id="icon-tahap4"></i>
+            </button>
+            <div id="tahap4" class="hidden border-t border-slate-100 p-5 space-y-3">
+                {% if tahap_5 %}
+                <div class="flex items-center gap-3 flex-wrap text-xs text-slate-600">
+                    <span class="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200">
+                        Jumlah kelas tersedia: <strong>{{ tahap_5.jumlah_kelas_tersedia }}</strong>
+                    </span>
+                    <span class="px-2.5 py-1 rounded-lg bg-brand-50 border border-brand-200 text-brand-700">
+                        Rekomendasi Utama: <strong>{{ tahap_5.rekomendasi_utama }}</strong>
+                    </span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left border border-slate-200 rounded-xl overflow-hidden">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-semibold">
+                            <tr>
+                                <th class="px-4 py-2.5">Peringkat</th>
+                                <th class="px-4 py-2.5">Jurusan</th>
+                                <th class="px-4 py-2.5 text-right">Skor Probabilitas</th>
+                                <th class="px-4 py-2.5">Keterangan</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for item in tahap_5.rekomendasi_teratas %}
+                            <tr class="{% if item.rank == 1 %}bg-brand-50{% endif %}">
+                                <td class="px-4 py-2.5 font-bold {% if item.rank == 1 %}text-brand-700{% else %}text-slate-600{% endif %}">{{ item.rank }}</td>
+                                <td class="px-4 py-2.5 font-semibold text-slate-900">{{ item.major_label }}</td>
+                                <td class="px-4 py-2.5 text-right font-extrabold {% if item.rank == 1 %}text-brand-700{% else %}text-slate-700{% endif %}">{{ item.score_percent }}%</td>
+                                <td class="px-4 py-2.5">{% if item.rank == 1 %}<span class="text-brand-600 font-semibold">★ Utama</span>{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-xs text-slate-400 italic">Skor di atas adalah probabilitas prediksi model, bukan jaminan keberhasilan akademik.</p>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    {% else %}
+    <!-- Prediksi Gagal -->
+    <div class="bg-white rounded-2xl border border-rose-200 shadow-sm p-6">
+        <div class="flex items-start gap-4">
+            <div class="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600 flex-shrink-0">
+                <i data-lucide="alert-octagon" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <h4 class="text-sm font-bold text-rose-800">Prediksi Gagal</h4>
+                <p class="text-xs text-rose-600 mt-1">{{ pred_run.error_message|default:"Tidak ada keterangan error tersedia." }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+function toggleSection(id) {
+    const section = document.getElementById(id);
+    const icon = document.getElementById('icon-' + id);
+    section.classList.toggle('hidden');
+    if (!section.classList.contains('hidden')) {
+        icon.style.transform = 'rotate(180deg)';
+    } else {
+        icon.style.transform = 'rotate(0deg)';
+    }
+}
+// Auto-open first section
+document.addEventListener('DOMContentLoaded', () => toggleSection('tahap1'));
+</script>
+{% endblock %}

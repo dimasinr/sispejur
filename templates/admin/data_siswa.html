@@ -1,0 +1,177 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}Data Siswa{% endblock %}
+{% block page_subtitle %}Pengelolaan Data Siswa, Nilai Akademik, dan Status Pengisian Formulir (FR-03, FR-05){% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+
+    <!-- Header Actions & Search Filters -->
+    <div class="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        
+        <!-- Search & Filter Form -->
+        <form method="get" class="flex-1 flex flex-wrap items-center gap-3">
+            <div class="relative flex-1 min-w-[200px]">
+                <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400"></i>
+                <input type="text" name="q" value="{{ query }}" placeholder="Cari NIS atau nama siswa..." 
+                    class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 focus:border-transparent outline-none">
+            </div>
+
+            <!-- Filter Status Pengisian -->
+            <select name="status_pengisian" onchange="this.form.submit()" class="px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 outline-none text-slate-700 bg-white">
+                <option value="">Semua Status Pengisian</option>
+                <option value="Belum mengisi" {% if status_pengisian == 'Belum mengisi' %}selected{% endif %}>Belum mengisi</option>
+                <option value="Sudah mengisi" {% if status_pengisian == 'Sudah mengisi' %}selected{% endif %}>Sudah mengisi</option>
+                <option value="Perlu melengkapi data" {% if status_pengisian == 'Perlu melengkapi data' %}selected{% endif %}>Perlu melengkapi data</option>
+            </select>
+
+            <!-- Filter Status Prediksi -->
+            <select name="status_prediksi" onchange="this.form.submit()" class="px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500 outline-none text-slate-700 bg-white">
+                <option value="">Semua Status Prediksi</option>
+                <option value="Menunggu" {% if status_prediksi == 'Menunggu' %}selected{% endif %}>Menunggu</option>
+                <option value="Diproses" {% if status_prediksi == 'Diproses' %}selected{% endif %}>Diproses</option>
+                <option value="Berhasil" {% if status_prediksi == 'Berhasil' %}selected{% endif %}>Berhasil</option>
+                <option value="Gagal" {% if status_prediksi == 'Gagal' %}selected{% endif %}>Gagal</option>
+                <option value="Perlu prediksi ulang" {% if status_prediksi == 'Perlu prediksi ulang' %}selected{% endif %}>Perlu prediksi ulang</option>
+            </select>
+
+            {% if query or status_pengisian or status_prediksi %}
+            <a href="{% url 'data_siswa' %}" class="px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800">Reset Filter</a>
+            {% endif %}
+        </form>
+
+        <!-- Button Tambah Siswa -->
+        <a href="{% url 'siswa_create' %}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm shadow-md shadow-brand-500/20 transition-all flex-shrink-0">
+            <i data-lucide="user-plus" class="w-4 h-4"></i>
+            Tambah Siswa
+        </a>
+    </div>
+
+    <!-- Tabel Data Siswa -->
+    <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="border-b border-slate-200 bg-slate-50/70 text-slate-500 uppercase font-semibold">
+                        <th class="py-3.5 px-5">NIS</th>
+                        <th class="py-3.5 px-5">Nama Lengkap</th>
+                        <th class="py-3.5 px-5">Kelas / TA</th>
+                        <th class="py-3.5 px-5">Nilai Rapor</th>
+                        <th class="py-3.5 px-5">Status Formulir</th>
+                        <th class="py-3.5 px-5">Status Prediksi</th>
+                        <th class="py-3.5 px-5 text-right">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700">
+                    {% for student in page_obj %}
+                    <tr class="hover:bg-slate-50/60 transition-colors">
+                        <td class="py-4 px-5 font-mono font-bold text-slate-900">{{ student.nis }}</td>
+                        <td class="py-4 px-5 font-semibold text-slate-800">
+                            <a href="{% url 'siswa_detail' student.pk %}" class="hover:text-brand-600 transition-colors">
+                                {{ student.nama }}
+                            </a>
+                        </td>
+                        <td class="py-4 px-5 text-slate-500">
+                            <div>{{ student.kelas }}</div>
+                            <div class="text-[11px] text-slate-400">{{ student.tahun_ajaran }}</div>
+                        </td>
+                        <td class="py-4 px-5">
+                            {% if student.academic_data and student.academic_data.is_complete %}
+                            <span class="inline-flex items-center gap-1 font-semibold text-slate-800">
+                                <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-500"></i>
+                                Rerata: {{ student.academic_data.average_score }}
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                                <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
+                                Belum Lengkap
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-4 px-5">
+                            {% if student.status_pengisian == 'Sudah mengisi' %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Sudah Mengisi
+                            </span>
+                            {% elif student.status_pengisian == 'Perlu melengkapi data' %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                Perlu Dilengkapi
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                                Belum Mengisi
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-4 px-5">
+                            {% if student.status_prediksi == 'Berhasil' %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Berhasil
+                            </span>
+                            {% elif student.status_prediksi == 'Gagal' %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                Gagal
+                            </span>
+                            {% elif student.status_prediksi == 'Perlu prediksi ulang' %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                Perlu Ulang
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                                Menunggu
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-4 px-5 text-right">
+                            <div class="inline-flex items-center gap-1.5">
+                                <a href="{% url 'siswa_detail' student.pk %}" title="Lihat Detail Siswa" class="p-2 rounded-lg bg-slate-100 text-slate-600 hover:text-brand-600 hover:bg-brand-50 transition-colors">
+                                    <i data-lucide="eye" class="w-4 h-4"></i>
+                                </a>
+                                <a href="{% url 'siswa_edit' student.pk %}" title="Edit Data Siswa & Rapor" class="p-2 rounded-lg bg-slate-100 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                </a>
+                                <a href="{% url 'siswa_delete' student.pk %}" title="Hapus Siswa" class="p-2 rounded-lg bg-slate-100 text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition-colors">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="py-12 text-center text-slate-400">
+                            <i data-lucide="users-2" class="w-10 h-10 mx-auto text-slate-300 mb-2"></i>
+                            Tidak ada data siswa yang cocok dengan kriteria pencarian.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 bg-slate-50/50">
+            <div>
+                Menampilkan halaman {{ page_obj.number }} dari {{ page_obj.paginator.num_pages }}
+            </div>
+            <div class="flex items-center gap-2">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}&q={{ query }}&status_pengisian={{ status_pengisian }}&status_prediksi={{ status_prediksi }}" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 font-medium">Sebelumnya</a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&q={{ query }}&status_pengisian={{ status_pengisian }}&status_prediksi={{ status_prediksi }}" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 font-medium">Selanjutnya</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,242 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}Prediksi Jurusan{% endblock %}
+{% block page_subtitle %}Pilih siswa, jalankan prediksi Random Forest, dan lihat riwayat hasil rekomendasi{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+
+    <!-- Model Status Banner -->
+    {% if not active_model %}
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 text-amber-800">
+        <i data-lucide="alert-triangle" class="w-5 h-5 flex-shrink-0 text-amber-500"></i>
+        <div class="text-sm">
+            <strong>Belum ada model aktif.</strong> Silakan buka <a href="{% url 'data_latih' %}" class="font-bold underline hover:text-amber-900">Data Latih</a> dan latih model Random Forest terlebih dahulu sebelum menjalankan prediksi.
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Tabs -->
+    <div class="flex border-b border-slate-200 gap-1">
+        <a href="?tab=siap&q={{ query }}"
+            class="px-5 py-3 text-sm font-semibold rounded-t-xl border-b-2 transition-colors {% if tab == 'siap' %}border-brand-600 text-brand-600 bg-brand-50/50{% else %}border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300{% endif %}">
+            <i data-lucide="user-check" class="w-4 h-4 inline mr-1.5"></i>Siap Diprediksi
+            <span class="ml-1.5 px-2 py-0.5 rounded-full text-xs {% if tab == 'siap' %}bg-brand-600 text-white{% else %}bg-slate-200 text-slate-600{% endif %}">{{ total_ready }}</span>
+        </a>
+        <a href="?tab=riwayat&q={{ query }}"
+            class="px-5 py-3 text-sm font-semibold rounded-t-xl border-b-2 transition-colors {% if tab == 'riwayat' %}border-brand-600 text-brand-600 bg-brand-50/50{% else %}border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300{% endif %}">
+            <i data-lucide="history" class="w-4 h-4 inline mr-1.5"></i>Riwayat Prediksi
+            <span class="ml-1.5 px-2 py-0.5 rounded-full text-xs {% if tab == 'riwayat' %}bg-brand-600 text-white{% else %}bg-slate-200 text-slate-600{% endif %}">{{ total_hist }}</span>
+        </a>
+    </div>
+
+    <!-- Search -->
+    <form method="get" class="flex gap-3">
+        <input type="hidden" name="tab" value="{{ tab }}">
+        <div class="flex-1 relative">
+            <span class="absolute inset-y-0 left-3 flex items-center text-slate-400 pointer-events-none">
+                <i data-lucide="search" class="w-4 h-4"></i>
+            </span>
+            <input type="text" name="q" value="{{ query }}" placeholder="Cari NIS atau nama siswa..."
+                class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+        </div>
+        <button type="submit" class="px-5 py-2.5 bg-brand-600 text-white font-semibold text-sm rounded-xl hover:bg-brand-700 transition-colors">Cari</button>
+        {% if query %}<a href="?tab={{ tab }}" class="px-4 py-2.5 bg-slate-100 text-slate-600 font-semibold text-sm rounded-xl hover:bg-slate-200 transition-colors">Reset</a>{% endif %}
+    </form>
+
+    <!-- ====== TAB: SIAP DIPREDIKSI ====== -->
+    {% if tab == 'siap' %}
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-900">Siswa Siap Diprediksi</h3>
+            {% if active_model %}
+            <form method="post" action="{% url 'run_prediction_batch' %}" id="batch-form">
+                {% csrf_token %}
+                <button type="submit" onclick="return confirmBatch()"
+                    class="text-xs font-semibold px-4 py-2 rounded-xl bg-brand-600 text-white hover:bg-brand-700 transition-colors flex items-center gap-1.5">
+                    <i data-lucide="zap" class="w-3.5 h-3.5"></i> Prediksi Terpilih (Batch)
+                </button>
+            </form>
+            {% endif %}
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+                <thead class="border-b border-slate-100 text-slate-500 uppercase font-semibold">
+                    <tr>
+                        <th class="px-4 py-3">
+                            <input type="checkbox" id="select-all" class="rounded" onchange="toggleAll()">
+                        </th>
+                        <th class="px-4 py-3">NIS</th>
+                        <th class="px-4 py-3">Nama Siswa</th>
+                        <th class="px-4 py-3">Kelas</th>
+                        <th class="px-4 py-3">Status Pengisian</th>
+                        <th class="px-4 py-3">Status Prediksi</th>
+                        <th class="px-4 py-3 text-right">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700">
+                    {% for student in page_ready %}
+                    <tr class="hover:bg-slate-50/70 transition-colors">
+                        <td class="px-4 py-3.5">
+                            <input type="checkbox" name="selected_students" value="{{ student.pk }}" form="batch-form" class="rounded student-checkbox">
+                        </td>
+                        <td class="px-4 py-3.5 font-mono font-semibold text-slate-900">{{ student.nis }}</td>
+                        <td class="px-4 py-3.5 font-medium">{{ student.nama }}</td>
+                        <td class="px-4 py-3.5 text-slate-500">{{ student.kelas }}</td>
+                        <td class="px-4 py-3.5">
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                {{ student.status_pengisian }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3.5">
+                            {% if student.status_prediksi == 'Berhasil' %}
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-teal-50 text-teal-700 border border-teal-200">Berhasil</span>
+                            {% elif student.status_prediksi == 'Gagal' %}
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">Gagal</span>
+                            {% elif student.status_prediksi == 'Perlu prediksi ulang' %}
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">Perlu Ulang</span>
+                            {% else %}
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">{{ student.status_prediksi }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3.5 text-right">
+                            {% if active_model %}
+                            <a href="{% url 'run_prediction_single' student.pk %}"
+                                onclick="return confirm('Jalankan prediksi untuk {{ student.nama }}?')"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 font-semibold transition-colors">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Prediksi
+                            </a>
+                            {% else %}
+                            <span class="text-slate-300 text-[11px]">Model belum siap</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-4 py-10 text-center text-slate-400">
+                            <i data-lucide="user-x" class="w-8 h-8 mx-auto mb-2 text-slate-300"></i>
+                            <p>Tidak ada siswa yang memenuhi kriteria untuk diprediksi saat ini.</p>
+                            <p class="mt-1 text-xs">Pastikan siswa sudah mengisi formulir dan data akademiknya lengkap.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_ready.has_other_pages %}
+        <div class="px-5 py-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Menampilkan {{ page_ready.start_index }}–{{ page_ready.end_index }} dari {{ page_ready.paginator.count }}</span>
+            <div class="flex gap-1">
+                {% if page_ready.has_previous %}
+                <a href="?tab=siap&page={{ page_ready.previous_page_number }}&q={{ query }}" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-600 font-semibold">← Sebelumnya</a>
+                {% endif %}
+                {% if page_ready.has_next %}
+                <a href="?tab=siap&page={{ page_ready.next_page_number }}&q={{ query }}" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-600 font-semibold">Berikutnya →</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ====== TAB: RIWAYAT ====== -->
+    {% else %}
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100">
+            <h3 class="text-sm font-bold text-slate-900">Riwayat Proses Prediksi</h3>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+                <thead class="border-b border-slate-100 text-slate-500 uppercase font-semibold">
+                    <tr>
+                        <th class="px-4 py-3">Waktu</th>
+                        <th class="px-4 py-3">NIS</th>
+                        <th class="px-4 py-3">Nama Siswa</th>
+                        <th class="px-4 py-3">Kelas</th>
+                        <th class="px-4 py-3">Model</th>
+                        <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3">Rekomendasi #1</th>
+                        <th class="px-4 py-3 text-right">Detail</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700">
+                    {% for run in page_hist %}
+                    <tr class="hover:bg-slate-50/70 transition-colors">
+                        <td class="px-4 py-3.5 font-mono text-slate-500 whitespace-nowrap">{{ run.completed_at|date:"d/m/Y H:i" }}</td>
+                        <td class="px-4 py-3.5 font-semibold text-slate-900">{{ run.student.nis }}</td>
+                        <td class="px-4 py-3.5">{{ run.student.nama }}</td>
+                        <td class="px-4 py-3.5 text-slate-500">{{ run.student.kelas }}</td>
+                        <td class="px-4 py-3.5 font-mono text-indigo-600">{{ run.model_version.version_name|default:"—" }}</td>
+                        <td class="px-4 py-3.5">
+                            {% if run.status == 'Berhasil' %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Berhasil
+                            </span>
+                            {% elif run.status == 'Gagal' %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Gagal
+                            </span>
+                            {% else %}
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">{{ run.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3.5 font-semibold text-brand-700">
+                            {% with top=run.results.all|first %}
+                                {% if top %}{{ top.major_label }} <span class="text-emerald-600">({{ top.score|floatformat:1 }}%)</span>{% else %}—{% endif %}
+                            {% endwith %}
+                        </td>
+                        <td class="px-4 py-3.5 text-right">
+                            <a href="{% url 'prediksi_detail' run.pk %}"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-brand-50 hover:text-brand-600 font-semibold transition-colors">
+                                <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Detail
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-4 py-10 text-center text-slate-400">
+                            <i data-lucide="history" class="w-8 h-8 mx-auto mb-2 text-slate-300"></i>
+                            <p>Belum ada riwayat prediksi yang tercatat.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_hist.has_other_pages %}
+        <div class="px-5 py-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Menampilkan {{ page_hist.start_index }}–{{ page_hist.end_index }} dari {{ page_hist.paginator.count }}</span>
+            <div class="flex gap-1">
+                {% if page_hist.has_previous %}
+                <a href="?tab=riwayat&page={{ page_hist.previous_page_number }}&q={{ query }}" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-600 font-semibold">← Sebelumnya</a>
+                {% endif %}
+                {% if page_hist.has_next %}
+                <a href="?tab=riwayat&page={{ page_hist.next_page_number }}&q={{ query }}" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-600 font-semibold">Berikutnya →</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+function toggleAll() {
+    const master = document.getElementById('select-all');
+    document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = master.checked);
+}
+
+function confirmBatch() {
+    const selected = document.querySelectorAll('.student-checkbox:checked');
+    if (selected.length === 0) {
+        alert('Pilih minimal satu siswa terlebih dahulu.');
+        return false;
+    }
+    return confirm(`Jalankan prediksi untuk ${selected.length} siswa terpilih?`);
+}
+</script>
+{% endblock %}

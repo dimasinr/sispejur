@@ -1,0 +1,324 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block page_title %}Data Latih{% endblock %}
+{% block page_subtitle %}Kelola dataset pelatihan, atribut fitur, label jurusan, dan proses pelatihan model Random Forest{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+
+    <!-- Statistik Dataset -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4">
+            <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Total Data Latih</div>
+            <div class="text-3xl font-extrabold text-slate-900 mt-1">{{ total_records }}</div>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4">
+            <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Jumlah Kelas</div>
+            <div class="text-3xl font-extrabold text-indigo-700 mt-1">{{ distinct_majors|length }}</div>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4">
+            <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Model Aktif</div>
+            <div class="text-sm font-bold text-emerald-700 mt-2 truncate">
+                {% if active_model %}{{ active_model.version_name }}{% else %}<span class="text-rose-500">Belum Ada</span>{% endif %}
+            </div>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4">
+            <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Akurasi Model</div>
+            <div class="text-3xl font-extrabold mt-1 {% if active_model %}text-emerald-700{% else %}text-slate-400{% endif %}">
+                {% if active_model %}{{ active_model.evaluation_metrics.accuracy }}%{% else %}—{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+        <!-- Tabel Data Latih (kiri / tengah, col-span 2) -->
+        <div class="xl:col-span-2 space-y-4">
+
+            <!-- Search & Filter -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4">
+                <form method="get" class="flex flex-wrap gap-3 items-end">
+                    <div class="flex-1 min-w-48">
+                        <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Cari</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-3 flex items-center text-slate-400 pointer-events-none">
+                                <i data-lucide="search" class="w-4 h-4"></i>
+                            </span>
+                            <input type="text" name="q" value="{{ query }}" placeholder="Label jurusan / versi dataset..."
+                                class="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        </div>
+                    </div>
+                    <div class="min-w-40">
+                        <label class="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">Filter Jurusan</label>
+                        <select name="major_label" class="w-full py-2.5 px-3 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-indigo-500">
+                            <option value="">Semua Jurusan</option>
+                            {% for major in distinct_majors %}
+                            <option value="{{ major }}" {% if label_filter == major %}selected{% endif %}>{{ major }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="py-2.5 px-5 bg-brand-600 text-white text-sm font-semibold rounded-xl hover:bg-brand-700 transition-colors">
+                        Terapkan
+                    </button>
+                    {% if query or label_filter %}
+                    <a href="{% url 'data_latih' %}" class="py-2.5 px-4 bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-200 transition-colors">
+                        Reset
+                    </a>
+                    {% endif %}
+                </form>
+            </div>
+
+            <!-- Tabel -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                <div class="flex items-center justify-between p-5 border-b border-slate-100">
+                    <h3 class="text-sm font-bold text-slate-900">Dataset Pelatihan</h3>
+                    <div class="flex gap-2">
+                        <!-- Import CSV -->
+                        <button onclick="document.getElementById('modal-csv').classList.remove('hidden')"
+                            class="text-xs font-semibold px-3 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors flex items-center gap-1.5">
+                            <i data-lucide="upload" class="w-3.5 h-3.5"></i> Import CSV
+                        </button>
+                        <!-- Tambah Manual -->
+                        <a href="{% url 'data_latih_create' %}"
+                            class="text-xs font-semibold px-3 py-2 rounded-xl bg-brand-600 text-white hover:bg-brand-700 transition-colors flex items-center gap-1.5">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah Manual
+                        </a>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left">
+                        <thead class="border-b border-slate-100 text-slate-500 uppercase font-semibold">
+                            <tr>
+                                <th class="px-4 py-3">#ID</th>
+                                <th class="px-4 py-3">Label Jurusan</th>
+                                <th class="px-4 py-3">Versi Dataset</th>
+                                <th class="px-4 py-3">Nilai Akademik (rata-rata)</th>
+                                <th class="px-4 py-3">Skor Minat (rata-rata)</th>
+                                <th class="px-4 py-3 text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-slate-700">
+                            {% for record in page_obj %}
+                            <tr class="hover:bg-slate-50/70 transition-colors">
+                                <td class="px-4 py-3.5 font-mono text-slate-400">#{{ record.id }}</td>
+                                <td class="px-4 py-3.5">
+                                    <span class="font-semibold text-slate-900">{{ record.major_label }}</span>
+                                </td>
+                                <td class="px-4 py-3.5">
+                                    <span class="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-mono font-semibold">{{ record.dataset_version }}</span>
+                                </td>
+                                <td class="px-4 py-3.5 text-slate-600">
+                                    {% with fv=record.feature_values %}
+                                    {% if fv %}
+                                        {% widthratio fv.nilai_matematika|add:fv.nilai_bahasa_indonesia|add:fv.nilai_bahasa_inggris|add:fv.nilai_ipa|add:fv.nilai_ips|add:fv.nilai_agama 6 1 %} rata-rata
+                                    {% else %}—{% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td class="px-4 py-3.5 text-slate-600">
+                                    {% with fv=record.feature_values %}
+                                    {% if fv %}Teknologi: {{ fv.minat_teknologi }}, Sains: {{ fv.minat_sains }}{% endif %}
+                                    {% endwith %}
+                                </td>
+                                <td class="px-4 py-3.5 text-right">
+                                    <a href="{% url 'data_latih_delete' record.pk %}"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors text-xs font-semibold">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Hapus
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="px-4 py-10 text-center text-slate-400">
+                                    <i data-lucide="database" class="w-8 h-8 mx-auto mb-2 text-slate-300"></i>
+                                    <p>Belum ada data latih. Import CSV atau tambah secara manual.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if page_obj.has_other_pages %}
+                <div class="px-5 py-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                    <span>Menampilkan {{ page_obj.start_index }}–{{ page_obj.end_index }} dari {{ page_obj.paginator.count }} data</span>
+                    <div class="flex gap-1">
+                        {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}&q={{ query }}&major_label={{ label_filter }}"
+                            class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-600 font-semibold transition-colors">← Sebelumnya</a>
+                        {% endif %}
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}&q={{ query }}&major_label={{ label_filter }}"
+                            class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-600 font-semibold transition-colors">Berikutnya →</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Panel Kanan: Pelatihan Model + Evaluasi -->
+        <div class="space-y-4">
+
+            <!-- Form Pelatihan Model -->
+            <div class="bg-gradient-to-br from-slate-900 to-indigo-950 rounded-3xl p-6 text-white shadow-xl">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="p-2.5 rounded-xl bg-brand-500/20">
+                        <i data-lucide="cpu" class="w-5 h-5 text-brand-300"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-sm">Latih Model Random Forest</h3>
+                        <p class="text-xs text-indigo-300">Menggunakan Scikit-learn</p>
+                    </div>
+                </div>
+
+                <form method="post" action="{% url 'model_train' %}">
+                    {% csrf_token %}
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-indigo-200 font-semibold mb-1.5">Jumlah Pohon (n_estimators)</label>
+                            <input type="number" name="n_estimators" value="100" min="10" max="1000"
+                                class="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white placeholder-indigo-300 text-sm focus:ring-2 focus:ring-brand-400 focus:outline-none">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs text-indigo-200 font-semibold mb-1.5">Test Size</label>
+                                <input type="number" name="test_size" value="0.2" step="0.05" min="0.1" max="0.5"
+                                    class="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm focus:ring-2 focus:ring-brand-400 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-indigo-200 font-semibold mb-1.5">Random State</label>
+                                <input type="number" name="random_state" value="42"
+                                    class="w-full px-3 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm focus:ring-2 focus:ring-brand-400 focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit"
+                        class="w-full mt-4 py-3 px-5 bg-brand-500 hover:bg-brand-400 text-white font-bold text-sm rounded-xl transition-colors flex items-center justify-center gap-2">
+                        <i data-lucide="zap" class="w-4 h-4"></i>
+                        Mulai Pelatihan Model
+                    </button>
+                </form>
+            </div>
+
+            <!-- Evaluasi Model Aktif -->
+            {% if active_model %}
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-bold text-slate-900">Evaluasi Model Aktif</h3>
+                    <span class="text-xs font-mono font-semibold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-lg border border-brand-200">{{ active_model.version_name }}</span>
+                </div>
+
+                {% with m=active_model.evaluation_metrics %}
+                <div class="space-y-2.5">
+                    <div class="flex justify-between items-center py-2 border-b border-slate-100 text-xs">
+                        <span class="text-slate-600">Akurasi Data Uji</span>
+                        <span class="font-extrabold text-emerald-600 text-base">{{ m.accuracy }}%</span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-slate-100 text-xs">
+                        <span class="text-slate-600">Precision (Macro)</span>
+                        <span class="font-bold text-slate-800">{{ m.precision_macro }}%</span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-slate-100 text-xs">
+                        <span class="text-slate-600">Recall (Macro)</span>
+                        <span class="font-bold text-slate-800">{{ m.recall_macro }}%</span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-slate-100 text-xs">
+                        <span class="text-slate-600">F1-Score (Macro)</span>
+                        <span class="font-bold text-slate-800">{{ m.f1_macro }}%</span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 text-xs">
+                        <span class="text-slate-600">F1-Score (Weighted)</span>
+                        <span class="font-bold text-slate-800">{{ m.f1_weighted }}%</span>
+                    </div>
+                </div>
+
+                <!-- Feature Importance -->
+                {% if m.feature_importances %}
+                <div class="mt-4 pt-4 border-t border-slate-100">
+                    <p class="text-xs font-bold text-slate-700 mb-3">Feature Importance (Global)</p>
+                    <div class="space-y-2">
+                        {% for fi in m.feature_importances %}
+                        <div>
+                            <div class="flex justify-between text-xs text-slate-600 mb-1">
+                                <span class="truncate">{{ fi.label }}</span>
+                                <span class="font-semibold ml-2 flex-shrink-0">{{ fi.importance }}%</span>
+                            </div>
+                            <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-brand-500 rounded-full" style="width: {{ fi.importance }}%"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                {% endwith %}
+            </div>
+            {% endif %}
+
+            <!-- Riwayat Versi Model -->
+            {% if all_models %}
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
+                <h3 class="text-sm font-bold text-slate-900 mb-3">Riwayat Versi Model</h3>
+                <div class="space-y-2">
+                    {% for mv in all_models %}
+                    <div class="flex items-center justify-between p-2.5 rounded-xl {% if mv.is_active %}bg-emerald-50 border border-emerald-200{% else %}bg-slate-50 border border-slate-200{% endif %} text-xs">
+                        <div>
+                            <span class="font-mono font-semibold {% if mv.is_active %}text-emerald-700{% else %}text-slate-700{% endif %}">{{ mv.version_name }}</span>
+                            <span class="text-slate-400 block">{{ mv.trained_at|date:"d M Y, H:i" }}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-bold {% if mv.is_active %}text-emerald-600{% else %}text-slate-600{% endif %}">{{ mv.evaluation_metrics.accuracy }}%</span>
+                            {% if mv.is_active %}<span class="block text-[10px] text-emerald-600 font-semibold">Aktif</span>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal Import CSV -->
+<div id="modal-csv" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md">
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="font-bold text-slate-900">Import Data Latih dari CSV</h3>
+            <button onclick="document.getElementById('modal-csv').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
+                <strong>Format CSV yang diperlukan:</strong> Kolom harus memuat
+                <code>major_label, nilai_matematika, nilai_bahasa_indonesia, nilai_bahasa_inggris, nilai_ipa, nilai_ips, nilai_agama, minat_teknologi, minat_sains, minat_bisnis, minat_sosial, minat_seni, minat_pendidikan</code>
+            </div>
+            <form method="post" action="{% url 'data_latih_import_csv' %}" enctype="multipart/form-data" class="space-y-3">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">File CSV</label>
+                    <input type="file" name="csv_file" accept=".csv" required
+                        class="block w-full text-sm text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 cursor-pointer">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Versi Dataset</label>
+                    <input type="text" name="dataset_version" value="v1.0"
+                        class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" class="flex-1 py-2.5 bg-brand-600 text-white font-bold text-sm rounded-xl hover:bg-brand-700 transition-colors">
+                        Upload & Import
+                    </button>
+                    <button type="button" onclick="document.getElementById('modal-csv').classList.add('hidden')"
+                        class="flex-1 py-2.5 bg-slate-100 text-slate-700 font-semibold text-sm rounded-xl hover:bg-slate-200 transition-colors">
+                        Batal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

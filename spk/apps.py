@@ -1,0 +1,7 @@
+from django.apps import AppConfig
+
+
+class SpkConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'spk'
+    verbose_name = 'Sistem Pendukung Keputusan Penjurusan'
