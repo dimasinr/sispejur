@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import logging
 from datetime import datetime
@@ -251,13 +252,39 @@ def predict_for_student(student, model_ver=None):
     if not model_ver:
         return False, "Belum ada model Random Forest yang aktif. Silakan latih model pada menu Data Latih terlebih dahulu.", None
 
-    # Resolve artifact_path: dukung path relatif (dari MEDIA_ROOT) maupun absolute path lama
-    artifact_path = model_ver.artifact_path
-    if not os.path.isabs(artifact_path):
-        artifact_path = str(Path(settings.MEDIA_ROOT) / artifact_path)
+    # Resolve artifact_path ke absolute path yang valid di environment saat ini.
+    # Mendukung tiga kemungkinan nilai di DB:
+    #   1. Relative path baru  : "models/model_RF-xxx.joblib"
+    #   2. Absolute path Unix  : "/home/.../media/models/model_RF-xxx.joblib"
+    #   3. Absolute path Windows lama: "C:\Users\...\media\models\model_RF-xxx.joblib"
+    raw_path = model_ver.artifact_path
+
+    # Deteksi Windows absolute path (mengandung drive letter seperti C:\) — terjadi
+    # ketika model dilatih di Windows lalu dijalankan di Linux production.
+    import re as _re
+    _is_windows_abs = bool(_re.match(r'^[A-Za-z]:[/\\]', raw_path))
+
+    if _is_windows_abs:
+        # Ekstrak hanya bagian relatif: ambil dari segmen 'models/' ke akhir
+        _norm = raw_path.replace('\\', '/')
+        _match = _re.search(r'(models/[^/].+)$', _norm)
+        if _match:
+            artifact_path = str(Path(settings.MEDIA_ROOT) / _match.group(1))
+        else:
+            # Fallback: ambil hanya nama file
+            artifact_path = str(Path(settings.MEDIA_ROOT) / 'models' / Path(raw_path.replace('\\', '/')).name)
+    elif os.path.isabs(raw_path):
+        # Absolute path Unix — gunakan langsung
+        artifact_path = raw_path
+    else:
+        # Relative path (format baru) — gabungkan dengan MEDIA_ROOT
+        artifact_path = str(Path(settings.MEDIA_ROOT) / raw_path)
 
     if not os.path.exists(artifact_path):
-        return False, f"File artifact model tidak ditemukan. Pastikan file model sudah di-upload ke server production di: {artifact_path}", None
+        return False, (
+            f"File artifact model tidak ditemukan di: {artifact_path}\n"
+            f"Silakan latih ulang model pada menu Data Latih agar file tersimpan dengan path yang benar."
+        ), None
 
     try:
         rf_model = joblib.load(artifact_path)
