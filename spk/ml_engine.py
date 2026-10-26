@@ -180,6 +180,8 @@ def train_random_forest_model(n_estimators=100, max_depth=None, test_size=0.2, r
     version_code = f"RF-{timestamp_str}"
     artifact_filename = f"model_{version_code}.joblib"
     artifact_full_path = str(models_dir / artifact_filename)
+    # Simpan sebagai relative path dari MEDIA_ROOT agar portabel lintas environment
+    artifact_relative_path = f"models/{artifact_filename}"
 
     # Simpan model joblib
     joblib.dump(rf, artifact_full_path)
@@ -213,7 +215,7 @@ def train_random_forest_model(n_estimators=100, max_depth=None, test_size=0.2, r
             'confusion_matrix': cm,
             'feature_importances': feat_importance_sorted
         },
-        artifact_path=artifact_full_path,
+        artifact_path=artifact_relative_path,
         is_active=True,
         status='active'
     )
@@ -249,11 +251,16 @@ def predict_for_student(student, model_ver=None):
     if not model_ver:
         return False, "Belum ada model Random Forest yang aktif. Silakan latih model pada menu Data Latih terlebih dahulu.", None
 
-    if not os.path.exists(model_ver.artifact_path):
-        return False, f"File artifact model tidak ditemukan di path: {model_ver.artifact_path}", None
+    # Resolve artifact_path: dukung path relatif (dari MEDIA_ROOT) maupun absolute path lama
+    artifact_path = model_ver.artifact_path
+    if not os.path.isabs(artifact_path):
+        artifact_path = str(Path(settings.MEDIA_ROOT) / artifact_path)
+
+    if not os.path.exists(artifact_path):
+        return False, f"File artifact model tidak ditemukan. Pastikan file model sudah di-upload ke server production di: {artifact_path}", None
 
     try:
-        rf_model = joblib.load(model_ver.artifact_path)
+        rf_model = joblib.load(artifact_path)
     except Exception as e:
         return False, f"Gagal memuat file model: {str(e)}", None
 
